@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}テンプレート管理 - Agno Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-file-earmark-text"></i> テンプレート管理
+            </h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTemplateModal">
+                <i class="bi bi-plus-circle"></i> 新しいテンプレート作成
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Templates List -->
+    <div class="col-lg-8">
+        <div id="templatesContainer">
+            <!-- Loading spinner -->
+            <div class="text-center py-5" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">読み込み中...</span>
+                </div>
+                <p class="mt-2 text-muted">テンプレートを読み込み中...</p>
+            </div>
+            
+            <!-- Templates will be loaded here -->
+            <div id="templatesList" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Template Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> テンプレート統計
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0" id="totalTemplates">0</h4>
+                            <small class="text-muted">総テンプレート数</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0" id="activeTemplates">0</h4>
+                        <small class="text-muted">アクティブ</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Popular Templates -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-star"></i> 人気のテンプレート
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="popularTemplates">
+                    <p class="text-muted">データを読み込み中...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Template Guide -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> テンプレートについて
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    テンプレートは、ブログ記事の構造とスタイルを定義します。
+                </p>
+                <ul class="small text-muted">
+                    <li>変数は <code>{variable_name}</code> の形式で記述</li>
+                    <li>Markdownフォーマットをサポート</li>
+                    <li>ユーザーフィードバックで自動改善</li>
+                    <li>バージョン管理で変更履歴を追跡</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Template Modal -->
+<div class="modal fade" id="createTemplateModal" tabindex="-1" aria-labelledby="createTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTemplateModalLabel">新しいテンプレート作成</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createTemplateForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="templateName" class="form-label">テンプレート名</label>
+                        <input type="text" class="form-control" id="templateName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="templateDescription" class="form-label">説明</label>
+                        <textarea class="form-control" id="templateDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contentType" class="form-label">コンテンツタイプ</label>
+                        <select class="form-select" id="contentType">
+                            <option value="general">一般</option>
+                            <option value="technical">技術記事</option>
+                            <option value="news">ニュース</option>
+                            <option value="tutorial">チュートリアル</option>
+                            <option value="review">レビュー</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="templateContent" class="form-label">テンプレート内容</label>
+                        <textarea class="form-control font-monospace" id="templateContent" rows="10" 
+                                placeholder="# {title}
+
+## はじめに
+
+{introduction}
+
+## メインコンテンツ
+
+{main_content}
+
+## まとめ
+
+{conclusion}
+
+---
+*作成日: {publish_date}*"></textarea>
+                        <div class="form-text">
+                            変数は {variable_name} の形式で記述してください。Markdownフォーマットが使用できます。
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary" id="createTemplateBtn">
+                        <span class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <span class="button-text">作成</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Template Detail Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalLabel">テンプレート詳細</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="templateModalBody">
+                <!-- Template content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="copyTemplateContent()">
+                    <i class="bi bi-clipboard"></i> コピー
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="editTemplate()">
+                    <i class="bi bi-pencil"></i> 編集
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">テンプレートフィードバック</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="feedbackForm">
+                <div class="modal-body">
+                    <input type="hidden" id="feedbackTemplateId">
+                    
+                    <div class="mb-3">
+                        <label for="feedbackText" class="form-label">フィードバック</label>
+                        <textarea class="form-control" id="feedbackText" rows="4" 
+                                placeholder="このテンプレートについてのご意見をお聞かせください..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="feedbackScore" class="form-label">評価 (1-10)</label>
+                        <input type="range" class="form-range" id="feedbackScore" min="1" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">1</small>
+                            <small class="text-muted" id="scoreValue">5</small>
+                            <small class="text-muted">10</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary" id="submitFeedbackBtn">
+                        <span class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <span class="button-text">送信</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTemplates = [];
+let currentTemplateContent = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTemplates();
+    
+    // Score range input
+    document.getElementById('feedbackScore').addEventListener('input', function() {
+        document.getElementById('scoreValue').textContent = this.value;
+    });
+    
+    // Create template form
+    document.getElementById('createTemplateForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await createTemplate();
+    });
+    
+    // Feedback form
+    document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await submitFeedback();
+    });
+});
+
+async function loadTemplates() {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const templatesList = document.getElementById('templatesList');
+    
+    try {
+        const response = await fetch('/api/templates');
+        const result = await response.json();
+        
+        loadingSpinner.style.display = 'none';
+        
+        if (result.templates && result.templates.length > 0) {
+            currentTemplates = result.templates;
+            displayTemplates();
+            updateStats();
+            updatePopularTemplates();
+            templatesList.style.display = 'block';
+        } else {
+            templatesList.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-file-earmark-x display-1 text-muted"></i>
+                    <h4 class="mt-3 text-muted">テンプレートがありません</h4>
+                    <p class="text-muted">新しいテンプレートを作成してください。</p>
+                </div>
+            `;
+            templatesList.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+        loadingSpinner.style.display = 'none';
+        showAlert('テンプレートの読み込みに失敗しました', 'danger');
+    }
+}
+
+function displayTemplates() {
+    const templatesList = document.getElementById('templatesList');
+    
+    const templatesHtml = currentTemplates.map(template => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="card-title mb-1">
+                            ${template.name}
+                            ${template.is_active ? 
+                                '<span class="badge bg-success ms-2">アクティブ</span>' : 
+                                '<span class="badge bg-secondary ms-2">無効</span>'
+                            }
+                        </h5>
+                        <p class="card-text text-muted mb-2">
+                            ${template.description || '説明なし'}
+                        </p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> 
+                            更新: ${new Date(template.updated_at).toLocaleDateString('ja-JP')} |
+                            <i class="bi bi-star"></i> 
+                            評価: ${template.feedback_score.toFixed(1)} |
+                            <i class="bi bi-graph-up"></i> 
+                            使用回数: ${template.usage_count}
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-primary btn-sm" onclick="showTemplateDetail('${template.id}')">
+                                <i class="bi bi-eye"></i> 詳細
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="showFeedbackModal('${template.id}')">
+                                <i class="bi bi-chat-dots"></i> FB
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="copyToClipboard(\`${template.content ? template.content.replace(/`/g, '\\`') : ''}\`)">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    templatesList.innerHTML = templatesHtml;
+}
+
+function updateStats() {
+    const totalTemplates = currentTemplates.length;
+    const activeTemplates = currentTemplates.filter(t => t.is_active).length;
+    
+    document.getElementById('totalTemplates').textContent = totalTemplates;
+    document.getElementById('activeTemplates').textContent = activeTemplates;
+}
+
+function updatePopularTemplates() {
+    const popular = [...currentTemplates]
+        .sort((a, b) => b.usage_count - a.usage_count)
+        .slice(0, 3);
+    
+    const popularHtml = popular.map(template => `
+        <div class="mb-2">
+            <div class="d-flex justify-content-between">
+                <span class="text-primary">${template.name}</span>
+                <small class="text-muted">${template.usage_count}回</small>
+            </div>
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar" style="width: ${(template.usage_count / Math.max(...popular.map(t => t.usage_count)) * 100)}%"></div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('popularTemplates').innerHTML = popularHtml || '<p class="text-muted">データがありません</p>';
+}
+
+async function createTemplate() {
+    const name = document.getElementById('templateName').value;
+    const description = document.getElementById('templateDescription').value;
+    const contentType = document.getElementById('contentType').value;
+    const content = document.getElementById('templateContent').value;
+    
+    showLoading('createTemplateBtn');
+    
+    try {
+        // For now, we'll simulate template creation since the actual API might not be fully implemented
+        showAlert('テンプレート作成機能は開発中です', 'info');
+        
+        // Reset form
+        document.getElementById('createTemplateForm').reset();
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createTemplateModal'));
+        modal.hide();
+        
+        // Reload templates
+        await loadTemplates();
+        
+    } catch (error) {
+        console.error('Error creating template:', error);
+        showAlert('テンプレートの作成に失敗しました', 'danger');
+    } finally {
+        hideLoading('createTemplateBtn', '作成');
+    }
+}
+
+async function showTemplateDetail(templateId) {
+    const template = currentTemplates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    const modalBody = document.getElementById('templateModalBody');
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>基本情報</h6>
+                <table class="table table-sm">
+                    <tr><td>ID:</td><td><code>${template.id}</code></td></tr>
+                    <tr><td>名前:</td><td>${template.name}</td></tr>
+                    <tr><td>説明:</td><td>${template.description || 'なし'}</td></tr>
+                    <tr><td>バージョン:</td><td>${template.version}</td></tr>
+                    <tr><td>作成日:</td><td>${new Date(template.created_at).toLocaleString('ja-JP')}</td></tr>
+                    <tr><td>更新日:</td><td>${new Date(template.updated_at).toLocaleString('ja-JP')}</td></tr>
+                    <tr><td>使用回数:</td><td>${template.usage_count}</td></tr>
+                    <tr><td>評価:</td><td>${template.feedback_score.toFixed(1)}/10</td></tr>
+                    <tr><td>状態:</td><td>${template.is_active ? 'アクティブ' : '無効'}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>変数</h6>
+                <div class="border p-2 bg-light small">
+                    ${template.variables && template.variables.length > 0 
+                        ? template.variables.map(v => `<code>{${v}}</code>`).join(', ')
+                        : 'なし'
+                    }
+                </div>
+                
+                <h6 class="mt-3">フィードバック履歴</h6>
+                <div class="border p-2 bg-light small" style="max-height: 150px; overflow-y: auto;">
+                    ${template.feedback_history && template.feedback_history.length > 0
+                        ? template.feedback_history.slice(-3).map(fb => `
+                            <div class="mb-1">
+                                <small class="text-muted">${new Date(fb.timestamp).toLocaleString('ja-JP')}</small><br>
+                                ${fb.feedback || fb.analysis?.feedback || 'フィードバックなし'}
+                            </div>
+                        `).join('<hr>')
+                        : 'フィードバック履歴なし'
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h6>テンプレート内容</h6>
+            <div class="border p-3 bg-light">
+                <pre class="mb-0" style="white-space: pre-wrap; font-size: 0.9em;">${template.content || 'コンテンツなし'}</pre>
+            </div>
+        </div>
+    `;
+    
+    currentTemplateContent = template.content || '';
+    document.getElementById('templateModalLabel').textContent = template.name;
+    
+    const modal = new bootstrap.Modal(document.getElementById('templateModal'));
+    modal.show();
+}
+
+function copyTemplateContent() {
+    if (currentTemplateContent) {
+        copyToClipboard(currentTemplateContent);
+    }
+}
+
+function editTemplate() {
+    showAlert('テンプレート編集機能は開発中です', 'info');
+}
+
+function showFeedbackModal(templateId) {
+    document.getElementById('feedbackTemplateId').value = templateId;
+    document.getElementById('feedbackText').value = '';
+    document.getElementById('feedbackScore').value = 5;
+    document.getElementById('scoreValue').textContent = '5';
+    
+    const modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+    modal.show();
+}
+
+async function submitFeedback() {
+    const templateId = document.getElementById('feedbackTemplateId').value;
+    const feedback = document.getElementById('feedbackText').value;
+    const score = document.getElementById('feedbackScore').value;
+    
+    showLoading('submitFeedbackBtn');
+    
+    try {
+        const response = await fetch('/api/update-template', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                template_id: templateId,
+                feedback: feedback,
+                user_confirmation: false
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('フィードバックを送信しました', 'success');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
+            modal.hide();
+            
+            // Reload templates
+            await loadTemplates();
+        } else {
+            showAlert(`エラー: ${result.detail || result.message}`, 'danger');
+        }
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        showAlert('フィードバックの送信に失敗しました', 'danger');
+    } finally {
+        hideLoading('submitFeedbackBtn', '送信');
+    }
+}
+</script>
+{% endblock %}
