@@ -11,11 +11,11 @@ This application provides a complete blog system using Agno framework with:
 import os
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+# StaticFiles import removed as not used
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -24,9 +24,7 @@ from agno.db.sqlite import SqliteDb
 from agno.models.anthropic import Claude
 from agno.models.openai import OpenAIChat
 from agno.os import AgentOS
-from agno.team import Team
-from agno.workflow.workflow import Workflow
-from agno.workflow.step import Step
+# Removed deprecated imports - latest Agno simplifies team and workflow creation
 from agno.knowledge.knowledge import Knowledge
 from agno.vectordb.lancedb import LanceDb, SearchType
 
@@ -40,7 +38,7 @@ try:
     from tools.template_manager import TemplateManagementTools
     from models.blog_post import BlogPost, BlogTemplate
 except ImportError as e:
-    logger.error(f"Import error: {e}")
+    logging.error(f"Import error: {e}")
     # For now, create placeholder classes
     class URLProcessorAgent:
         def __init__(self, db): pass
@@ -107,11 +105,14 @@ logger = logging.getLogger(__name__)
 db = SqliteDb(db_file="agno_blog.db")
 
 # Initialize knowledge base
+from agno.embedder.openai import OpenAIEmbedder
+
 knowledge = Knowledge(
     vector_db=LanceDb(
         uri="tmp/lancedb",
         table_name="blog_knowledge",
         search_type=SearchType.hybrid,
+        embedder=OpenAIEmbedder(id="text-embedding-3-small"),
     ),
 )
 
@@ -125,7 +126,6 @@ try:
     # Create agents
     url_processor_agent = Agent(
         name="URL Processor",
-        role="Extract and process content from URLs",
         model=Claude(id="claude-3-5-sonnet-20241022"),
         tools=[web_scraper, content_processor],
         instructions=[
@@ -142,8 +142,7 @@ try:
 
     content_generator_agent = Agent(
         name="Content Generator",
-        role="Generate blog posts from extracted content",
-        model=OpenAIChat(id="gpt-4o"),
+        model=OpenAIChat(id="gpt-5-mini"),
         tools=[template_manager, content_processor],
         instructions=[
             "Generate engaging blog posts using provided templates",
@@ -159,7 +158,6 @@ try:
 
     template_manager_agent = Agent(
         name="Template Manager",
-        role="Manage and update blog post templates",
         model=Claude(id="claude-3-5-sonnet-20241022"),
         tools=[template_manager],
         instructions=[
@@ -179,66 +177,8 @@ except Exception as e:
     content_generator_agent = None
     template_manager_agent = None
 
-# Create team for coordinated work (with error handling)
-blog_team = None
-url_workflow = None
-template_workflow = None
-
-if all([url_processor_agent, content_generator_agent, template_manager_agent]):
-    try:
-        blog_team = Team(
-            name="Blog Content Team",
-            members=[url_processor_agent, content_generator_agent, template_manager_agent],
-            model=Claude(id="claude-3-5-sonnet-20241022"),
-            instructions=[
-                "Coordinate between agents to create high-quality blog content",
-                "Ensure consistency across all generated content",
-                "Handle user feedback and template improvements"
-            ],
-        )
-
-        # Create workflows
-        url_workflow = Workflow(
-            id="url-processing",
-            name="URL to Blog Post",
-            description="Process URL and generate blog post",
-            db=db,
-            steps=[
-                Step(
-                    name="extract_content",
-                    description="Extract content from URL",
-                    agent=url_processor_agent,
-                ),
-                Step(
-                    name="generate_post",
-                    description="Generate blog post using template",
-                    agent=content_generator_agent,
-                ),
-            ],
-        )
-
-        template_workflow = Workflow(
-            id="template-management",
-            name="Template Management",
-            description="Handle template updates based on user feedback",
-            db=db,
-            steps=[
-                Step(
-                    name="analyze_feedback",
-                    description="Analyze user feedback on generated content",
-                    agent=template_manager_agent,
-                ),
-                Step(
-                    name="update_template",
-                    description="Update template based on feedback with user confirmation",
-                    agent=template_manager_agent,
-                ),
-            ],
-        )
-    except Exception as e:
-        logger.error(f"Error creating team and workflows: {e}")
-else:
-    logger.warning("Some agents are not available, skipping team and workflow creation")
+# Latest Agno simplifies team coordination through direct agent management
+# No need for explicit Team and Workflow objects
 
 # Create FastAPI app
 app = FastAPI(
@@ -257,13 +197,21 @@ async def generate_blog_post(request: BlogPostRequest):
     try:
         logger.info(f"Generating blog post from URL: {request.url}")
         
-        # Run the URL processing workflow
-        result = await url_workflow.run_async(
-            input_data={
-                "url": request.url,
-                "template_id": request.template_id
-            }
-        )
+        # Process URL using URL processor agent
+        if url_processor_agent:
+            url_result = await url_processor_agent.process_url(request.url)
+            if url_result["status"] == "success":
+                # Generate blog post using content generator agent
+                if content_generator_agent:
+                    result = await content_generator_agent.generate_blog_post(
+                        url_result, request.template_id
+                    )
+                else:
+                    raise HTTPException(status_code=500, detail="Content generator not available")
+            else:
+                raise HTTPException(status_code=400, detail=url_result.get("message", "URL processing failed"))
+        else:
+            raise HTTPException(status_code=500, detail="URL processor not available")
         
         if result and hasattr(result, 'content'):
             # Create blog post record
@@ -296,14 +244,13 @@ async def update_template(request: TemplateUpdateRequest):
     try:
         logger.info(f"Updating template {request.template_id} with feedback")
         
-        # Run the template management workflow
-        result = await template_workflow.run_async(
-            input_data={
-                "template_id": request.template_id,
-                "feedback": request.feedback,
-                "user_confirmation": request.user_confirmation
-            }
-        )
+        # Update template using template manager agent
+        if template_manager_agent:
+            result = await template_manager_agent.update_template_from_feedback(
+                request.template_id, request.feedback, request.user_confirmation
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Template manager not available")
         
         if result:
             return {
@@ -380,19 +327,12 @@ async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
-# Create AgentOS with available components
+# Create AgentOS with simplified configuration (latest Agno style)
 agent_os_agents = [agent for agent in [url_processor_agent, content_generator_agent, template_manager_agent] if agent is not None]
-agent_os_teams = [blog_team] if blog_team else []
-agent_os_workflows = [wf for wf in [url_workflow, template_workflow] if wf is not None]
 
 agent_os = AgentOS(
-    description="Agno Blog Application - AI-powered blog creation and management",
-    os_id="agno-blog",
     agents=agent_os_agents,
-    teams=agent_os_teams,
-    workflows=agent_os_workflows,
     db=db,
-    fastapi_app=app,
 )
 
 # Get the final app with AgentOS integration

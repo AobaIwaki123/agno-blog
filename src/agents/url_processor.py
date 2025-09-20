@@ -6,12 +6,13 @@ It coordinates web scraping, content analysis, and metadata extraction.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from datetime import datetime
 
 from agno.agent import Agent
 from agno.models.anthropic import Claude
 from agno.db.sqlite import SqliteDb
+from agno.tools import tool
 
 from tools.web_scraper import WebScrapingTools
 from tools.content_processor import ContentProcessingTools
@@ -25,12 +26,39 @@ class URLProcessorAgent:
         self.web_scraper = WebScrapingTools()
         self.content_processor = ContentProcessingTools()
         
+        # Define tools using the @tool decorator
+        @tool
+        def extract_url_content(url: str) -> Dict[str, Any]:
+            """
+            Extract content from a given URL.
+            
+            Args:
+                url: The URL to extract content from
+                
+            Returns:
+                Dictionary containing extracted content and metadata
+            """
+            return self._extract_url_content_impl(url)
+
+        @tool
+        def analyze_extracted_content(content: str, title: str = "") -> Dict[str, Any]:
+            """
+            Perform advanced analysis on extracted content.
+            
+            Args:
+                content: The extracted content to analyze
+                title: Optional title of the content
+                
+            Returns:
+                Dictionary containing detailed content analysis
+            """
+            return self._analyze_extracted_content_impl(content, title)
+
         # Create the Agno agent
         self.agent = Agent(
             name="URL Processor",
-            role="Extract and process content from URLs for blog post generation",
             model=Claude(id="claude-3-5-sonnet-20241022"),
-            tools=[self._create_url_extraction_tool(), self._create_content_analysis_tool()],
+            tools=[extract_url_content, analyze_extracted_content],
             instructions=[
                 "You are a specialized agent for extracting and processing content from URLs.",
                 "Your primary responsibilities:",
@@ -56,9 +84,7 @@ class URLProcessorAgent:
             markdown=True,
         )
     
-    def _create_url_extraction_tool(self):
-        """Create a tool for URL content extraction."""
-        def extract_url_content(url: str) -> Dict[str, Any]:
+    def _extract_url_content_impl(self, url: str) -> Dict[str, Any]:
             """
             Extract content from a given URL.
             
@@ -120,11 +146,8 @@ class URLProcessorAgent:
                     "url": url
                 }
         
-        return extract_url_content
     
-    def _create_content_analysis_tool(self):
-        """Create a tool for advanced content analysis."""
-        def analyze_extracted_content(content: str, title: str = "") -> Dict[str, Any]:
+    def _analyze_extracted_content_impl(self, content: str, title: str = "") -> Dict[str, Any]:
             """
             Perform advanced analysis on extracted content.
             
@@ -200,7 +223,6 @@ class URLProcessorAgent:
                     "message": f"Analysis failed: {str(e)}"
                 }
         
-        return analyze_extracted_content
     
     async def process_url(self, url: str, additional_context: str = "") -> Dict[str, Any]:
         """

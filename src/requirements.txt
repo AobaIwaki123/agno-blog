@@ -1,16 +1,17 @@
-# Core Agno Framework
-agno>=0.1.0
-anthropic>=0.34.0
-openai>=1.0.0
+# Core Agno Framework - Updated to latest version
+agno>=0.2.0
+anthropic>=0.40.0
+openai>=1.50.0
 
 # Web Framework and API
-fastapi[standard]>=0.100.0
-uvicorn[standard]>=0.20.0
+fastapi[standard]>=0.115.0
+uvicorn[standard]>=0.30.0
 jinja2>=3.1.0
 
-# Database
+# Database and Storage
 sqlalchemy>=2.0.0
-sqlite3  # Built-in with Python
+# sqlite3 is built-in with Python
+psycopg[binary]>=3.2.0  # PostgreSQL adapter for production
 
 # Web Scraping and Content Processing
 httpx>=0.25.0
@@ -22,9 +23,9 @@ pydantic>=2.0.0
 pandas>=2.0.0
 numpy>=1.24.0
 
-# Vector Database and Knowledge Management
-lancedb>=0.3.0
-cohere>=4.0.0
+# Vector Database and Knowledge Management - Updated versions
+lancedb>=0.13.0
+cohere>=5.0.0
 
 # Content Processing
 markdown>=3.5.0
@@ -33,11 +34,11 @@ python-multipart>=0.0.6
 # Logging and Monitoring
 structlog>=23.0.0
 
-# Development and Testing
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-black>=23.0.0
-flake8>=6.0.0
+# Development and Testing - Updated versions
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+black>=24.0.0
+ruff>=0.6.0  # Modern replacement for flake8
 
 # Environment Management
 python-dotenv>=1.0.0

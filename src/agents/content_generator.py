@@ -13,10 +13,11 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.db.sqlite import SqliteDb
 from agno.knowledge.knowledge import Knowledge
+from agno.tools import tool
 
 from tools.template_manager import TemplateManagementTools
 from tools.content_processor import ContentProcessingTools
-from models.blog_post import BlogPost, create_blog_post_from_content
+from models.blog_post import BlogPost
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,56 @@ class ContentGeneratorAgent:
         self.content_processor = ContentProcessingTools()
         self.knowledge = knowledge
         
+        # Define tools using the @tool decorator
+        @tool
+        def generate_blog_post(extracted_content: Dict[str, Any], template_id: str = "default", 
+                             style_preferences: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            """
+            Generate a blog post from extracted content using a template.
+            
+            Args:
+                extracted_content: Dictionary containing extracted content and metadata
+                template_id: ID of the template to use
+                style_preferences: Optional style preferences
+                
+            Returns:
+                Dictionary containing generated blog post
+            """
+            return self._generate_blog_post_impl(extracted_content, template_id, style_preferences)
+
+        @tool
+        def enhance_blog_content(blog_content: str, enhancement_type: str = "readability") -> Dict[str, Any]:
+            """
+            Enhance blog content for better readability, SEO, or engagement.
+            
+            Args:
+                blog_content: The blog content to enhance
+                enhancement_type: Type of enhancement (readability, seo, engagement)
+                
+            Returns:
+                Dictionary containing enhanced content
+            """
+            return self._enhance_blog_content_impl(blog_content, enhancement_type)
+
+        @tool
+        def optimize_for_seo(content: str, target_keywords: Optional[List[str]] = None) -> Dict[str, Any]:
+            """
+            Optimize content for search engines.
+            
+            Args:
+                content: Content to optimize
+                target_keywords: Optional list of target keywords
+                
+            Returns:
+                Dictionary containing SEO optimization results
+            """
+            return self._optimize_for_seo_impl(content, target_keywords)
+
         # Create the Agno agent
         self.agent = Agent(
             name="Content Generator",
-            role="Generate high-quality blog posts from extracted content using templates",
-            model=OpenAIChat(id="gpt-4o"),
-            tools=[
-                self._create_blog_generation_tool(),
-                self._create_content_enhancement_tool(),
-                self._create_seo_optimization_tool()
-            ],
+            model=OpenAIChat(id="gpt-5-mini"),
+            tools=[generate_blog_post, enhance_blog_content, optimize_for_seo],
             instructions=[
                 "You are a specialized agent for generating high-quality blog posts.",
                 "Your primary responsibilities:",
@@ -64,10 +105,8 @@ class ContentGeneratorAgent:
             markdown=True,
         )
     
-    def _create_blog_generation_tool(self):
-        """Create a tool for blog post generation."""
-        def generate_blog_post(extracted_content: Dict[str, Any], template_id: str = "default", 
-                             style_preferences: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _generate_blog_post_impl(self, extracted_content: Dict[str, Any], template_id: str = "default", 
+                             style_preferences: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             """
             Generate a blog post from extracted content using a template.
             
@@ -163,11 +202,8 @@ class ContentGeneratorAgent:
                     "message": f"Blog post generation failed: {str(e)}"
                 }
         
-        return generate_blog_post
     
-    def _create_content_enhancement_tool(self):
-        """Create a tool for enhancing generated content."""
-        def enhance_blog_content(blog_content: str, enhancement_type: str = "readability") -> Dict[str, Any]:
+    def _enhance_blog_content_impl(self, blog_content: str, enhancement_type: str = "readability") -> Dict[str, Any]:
             """
             Enhance blog content for better readability, SEO, or engagement.
             
@@ -214,11 +250,8 @@ class ContentGeneratorAgent:
                     "message": f"Content enhancement failed: {str(e)}"
                 }
         
-        return enhance_blog_content
     
-    def _create_seo_optimization_tool(self):
-        """Create a tool for SEO optimization."""
-        def optimize_for_seo(content: str, target_keywords: List[str] = None) -> Dict[str, Any]:
+    def _optimize_for_seo_impl(self, content: str, target_keywords: Optional[List[str]] = None) -> Dict[str, Any]:
             """
             Optimize content for search engines.
             
@@ -266,7 +299,6 @@ class ContentGeneratorAgent:
                     "message": f"SEO optimization failed: {str(e)}"
                 }
         
-        return optimize_for_seo
     
     def _generate_blog_components(self, content: str, title: str, summary: str, 
                                 keywords: List[str], tone: str, target_audience: str, 
@@ -508,7 +540,7 @@ class ContentGeneratorAgent:
     
     async def generate_blog_post(self, extracted_content: Dict[str, Any], 
                                template_id: str = "default",
-                               style_preferences: Dict[str, Any] = None) -> Dict[str, Any]:
+                               style_preferences: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Generate a complete blog post from extracted content.
         
