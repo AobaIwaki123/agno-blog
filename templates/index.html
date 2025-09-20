@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agno Blog - AI-Powered Blog Generation</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agno Blog</h1>
+            <p>AI-powered blog generation and management system</p>
+        </div>
+
+        <!-- Blog Generation Form -->
+        <div class="form-container">
+            <h2>📝 新しいブログ記事を生成</h2>
+            <form id="generateForm">
+                <div class="form-group">
+                    <label for="url">URL:</label>
+                    <input type="url" id="url" name="url" placeholder="https://example.com/article" required>
+                </div>
+                <div class="form-group">
+                    <label for="template">テンプレート:</label>
+                    <select id="template" name="template">
+                        <option value="general">一般記事</option>
+                        <option value="technical">技術記事</option>
+                        <option value="news">ニュース記事</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="instructions">カスタム指示 (オプション):</label>
+                    <textarea id="instructions" name="instructions" rows="3" placeholder="記事のトーンやスタイルについての指示..."></textarea>
+                </div>
+                <button type="submit" class="btn">
+                    <span id="generateText">ブログ記事を生成</span>
+                    <span id="generateLoading" class="loading" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div id="result"></div>
+        </div>
+
+        <!-- Blog Posts Display -->
+        <div class="form-container">
+            <h2>📚 生成されたブログ記事</h2>
+            <div id="blogPosts">
+                <p class="text-center">記事を生成してください</p>
+            </div>
+        </div>
+
+        <!-- Template Management -->
+        <div class="template-section">
+            <h2>⚙️ テンプレート管理</h2>
+            <div class="form-group">
+                <label for="feedback">テンプレート改善フィードバック:</label>
+                <textarea id="feedback" name="feedback" rows="3" placeholder="テンプレートの改善点について..."></textarea>
+                <button onclick="updateTemplate()" class="btn btn-secondary">テンプレートを更新</button>
+            </div>
+            
+            <div id="templateResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Generate blog post
+        document.getElementById('generateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            const template = document.getElementById('template').value;
+            const instructions = document.getElementById('instructions').value;
+            
+            // Show loading state
+            document.getElementById('generateText').style.display = 'none';
+            document.getElementById('generateLoading').style.display = 'inline-block';
+            document.getElementById('result').innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/generate-post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        url, 
+                        template_id: template,
+                        custom_instructions: instructions 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="alert alert-success">✅ ブログ記事が生成されました！</div>';
+                    loadBlogPosts();
+                } else {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="alert alert-error">❌ エラー: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="alert alert-error">❌ エラー: ' + error.message + '</div>';
+            } finally {
+                // Hide loading state
+                document.getElementById('generateText').style.display = 'inline';
+                document.getElementById('generateLoading').style.display = 'none';
+            }
+        });
+        
+        // Load blog posts
+        async function loadBlogPosts() {
+            try {
+                const response = await fetch('/api/blog-posts');
+                const posts = await response.json();
+                
+                const container = document.getElementById('blogPosts');
+                
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="text-center">記事がありません</p>';
+                    return;
+                }
+                
+                container.innerHTML = posts.map(post => `
+                    <div class="blog-post fade-in">
+                        <h3>${post.title}</h3>
+                        <div class="meta">
+                            <strong>作成日:</strong> ${new Date(post.created_at).toLocaleString('ja-JP')} | 
+                            <strong>ソースURL:</strong> <a href="${post.url_source}" target="_blank">${post.url_source}</a> |
+                            <strong>タグ:</strong> ${post.tags.join(', ')}
+                        </div>
+                        <div class="content">${post.content}</div>
+                        <div class="actions">
+                            <button onclick="improvePost('${post.id}')" class="btn btn-small btn-success">記事を改善</button>
+                            <button onclick="deletePost('${post.id}')" class="btn btn-small btn-danger">削除</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading blog posts:', error);
+                document.getElementById('blogPosts').innerHTML = 
+                    '<div class="alert alert-error">記事の読み込みに失敗しました</div>';
+            }
+        }
+        
+        // Update template
+        async function updateTemplate() {
+            const feedback = document.getElementById('feedback').value;
+            if (!feedback.trim()) {
+                alert('フィードバックを入力してください');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/update-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        template_id: 'default', 
+                        feedback: feedback 
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    document.getElementById('templateResult').innerHTML = 
+                        '<div class="alert alert-success">✅ テンプレートが更新されました！</div>';
+                    document.getElementById('feedback').value = '';
+                } else {
+                    document.getElementById('templateResult').innerHTML = 
+                        '<div class="alert alert-error">❌ エラー: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('templateResult').innerHTML = 
+                    '<div class="alert alert-error">❌ エラー: ' + error.message + '</div>';
+            }
+        }
+        
+        // Improve post
+        async function improvePost(postId) {
+            const feedback = prompt('改善点を入力してください:');
+            if (!feedback || !feedback.trim()) return;
+            
+            try {
+                const response = await fetch(`/api/improve-post/${postId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback: feedback.trim() })
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('✅ 記事が改善されました！');
+                    loadBlogPosts();
+                } else {
+                    alert('❌ エラー: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ エラー: ' + error.message);
+            }
+        }
+        
+        // Delete post
+        async function deletePost(postId) {
+            if (!confirm('この記事を削除しますか？')) return;
+            
+            try {
+                // In a real implementation, this would call a delete API
+                // For now, we'll just remove it from the display
+                const posts = await fetch('/api/blog-posts').then(r => r.json());
+                const updatedPosts = posts.filter(p => p.id !== postId);
+                
+                // Update the display
+                const container = document.getElementById('blogPosts');
+                if (updatedPosts.length === 0) {
+                    container.innerHTML = '<p class="text-center">記事がありません</p>';
+                } else {
+                    // Reload the posts
+                    loadBlogPosts();
+                }
+                
+                alert('✅ 記事が削除されました！');
+            } catch (error) {
+                alert('❌ エラー: ' + error.message);
+            }
+        }
+        
+        // Load blog posts on page load
+        loadBlogPosts();
+    </script>
+</body>
+</html>
