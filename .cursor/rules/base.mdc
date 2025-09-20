@@ -1,0 +1,62 @@
+---
+alwaysApply: true
+---
+
+[Agno](https://docs.agno.com/introduction/quickstart)を使って、ブログアプリを開発する。
+
+## 機能
+
+1. ブログ記事の投稿機能
+   1. URLを送ると裏でAgentが関連情報を集め、ブログ記事を生成する
+2. ブログ記事のテンプレート編集機能
+   1. 出来栄えに対して、ユーザーが添削しその結果を元に記事テンプレートを更新する
+   2. 記事テンプレートの更新可否は必ずユーザーに確認する
+3. ブログ記事の閲覧機能
+   1. 現状、シンプルな静的サイトを予定しているが拡張の余地を残す。
+
+## デプロイ先
+
+実装次第だが、GitHub Pagesに簡易的にデプロイするかCloud Runを使用する予定。
+Argo AgentはおそらくCloud Runを使用する。
+
+## Quick Start
+
+```py
+from agno.agent import Agent
+from agno.models.anthropic import Claude
+from agno.tools.hackernews import HackerNewsTools
+
+agent = Agent(
+    model=Claude(id="claude-sonnet-4-0"),
+    tools=[HackerNewsTools()],
+    markdown=True,
+)
+agent.print_response("Summarize the top 5 stories on hackernews", stream=True)
+```
+
+```py
+from agno.agent import Agent
+from agno.db.sqlite import SqliteDb
+from agno.models.anthropic import Claude
+from agno.os import AgentOS
+from agno.tools.mcp import MCPTools
+
+# Create the Agent
+agno_agent = Agent(
+    name="Agno Agent",
+    model=Claude(id="claude-sonnet-4-0"),
+    # Add a database to the Agent
+    db=SqliteDb(db_file="agno.db"),
+    # Add the Agno MCP server to the Agent
+    tools=[MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp")],
+    # Add the previous session history to the context
+    add_history_to_context=True,
+    markdown=True,
+)
+
+
+# Create the AgentOS
+agent_os = AgentOS(agents=[agno_agent])
+# Get the FastAPI app for the AgentOS
+app = agent_os.get_app()
+```
