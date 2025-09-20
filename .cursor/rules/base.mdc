@@ -15,6 +15,16 @@ description: Basic Information about this project
 3. ブログ記事の閲覧機能
    1. 現状、シンプルな静的サイトを予定しているが拡張の余地を残す。
 
+## 開発環境
+
+- Python 3.12
+- conda env: agno
+
+```sh
+$ conda create -n agno python=3.12
+$ conda activate agno
+```
+
 ## デプロイ先
 
 実装次第だが、GitHub Pagesに簡易的にデプロイするかCloud Runを使用する予定。
@@ -63,14 +73,9 @@ app = agent_os.get_app()
 ```
 
 ```sh
-uv venv --python 3.12
-source .venv/bin/activate
-
-uv pip install -U agno anthropic mcp 'fastapi[standard]' sqlalchemy
+pip install -r requirements.txt
 
 export ANTHROPIC_API_KEY=sk-***
 
-fastapi dev agno_agent.py
-
-fastapi dev agno_agent.py
+make agno-agent
 ```
