@@ -1,0 +1,361 @@
+---
+alwaysApply: true
+description: Blog application specific architecture and workflow patterns using Agno framework
+---
+
+# Blog Application Architecture
+
+## Core Workflow
+
+### 1. URL Processing Workflow
+```python
+from agno.workflow.workflow import Workflow
+from agno.workflow.step import Step
+
+# URL processing workflow
+url_workflow = Workflow(
+    id="url-processing",
+    name="URL to Blog Post",
+    description="Process URL and generate blog post",
+    db=db,
+    steps=[
+        Step(
+            name="extract_content",
+            description="Extract content from URL",
+            agent=url_processor_agent,
+        ),
+        Step(
+            name="analyze_content", 
+            description="Analyze and structure content",
+            agent=content_analyzer_agent,
+        ),
+        Step(
+            name="generate_post",
+            description="Generate blog post using template",
+            agent=content_generator_agent,
+        ),
+    ],
+)
+```
+
+### 2. Template Management Workflow
+```python
+template_workflow = Workflow(
+    id="template-management",
+    name="Template Editing",
+    description="Handle template updates based on user feedback",
+    db=db,
+    steps=[
+        Step(
+            name="analyze_feedback",
+            description="Analyze user feedback on generated content",
+            agent=feedback_analyzer_agent,
+        ),
+        Step(
+            name="update_template",
+            description="Update template based on feedback",
+            agent=template_manager_agent,
+        ),
+        Step(
+            name="validate_template",
+            description="Validate updated template",
+            agent=template_validator_agent,
+        ),
+    ],
+)
+```
+
+## Agent Specializations
+
+### URL Processor Agent
+```python
+url_processor_agent = Agent(
+    name="URL Processor",
+    role="Extract and process content from URLs",
+    model=Claude(id="claude-sonnet-4-0"),
+    tools=[
+        web_scraper_tool,
+        content_extractor_tool,
+        metadata_collector_tool,
+    ],
+    instructions=[
+        "Extract main content from provided URLs",
+        "Identify key topics and themes",
+        "Collect relevant metadata (title, author, date, etc.)",
+        "Clean and structure the extracted content",
+    ],
+    db=db,
+    enable_user_memories=True,
+)
+```
+
+### Content Generator Agent
+```python
+content_generator_agent = Agent(
+    name="Content Generator",
+    role="Generate blog posts from extracted content",
+    model=OpenAIChat(id="gpt-5-mini"),
+    tools=[
+        template_loader_tool,
+        content_formatter_tool,
+        seo_optimizer_tool,
+    ],
+    instructions=[
+        "Generate engaging blog posts using provided templates",
+        "Maintain consistent tone and style",
+        "Optimize for SEO and readability",
+        "Include relevant metadata and tags",
+    ],
+    db=db,
+    knowledge=blog_knowledge,
+)
+```
+
+### Template Manager Agent
+```python
+template_manager_agent = Agent(
+    name="Template Manager",
+    role="Manage and update blog post templates",
+    model=Claude(id="claude-sonnet-4-0"),
+    tools=[
+        file_system_tool,
+        template_parser_tool,
+        version_control_tool,
+    ],
+    instructions=[
+        "Analyze user feedback on generated content",
+        "Identify patterns in feedback to improve templates",
+        "Update templates while maintaining consistency",
+        "Track template versions and changes",
+    ],
+    db=db,
+)
+```
+
+## Data Models
+
+### Blog Post Model
+```python
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
+
+class BlogPost(BaseModel):
+    id: str
+    title: str
+    content: str
+    url_source: Optional[str] = None
+    template_used: str
+    created_at: datetime
+    updated_at: datetime
+    tags: List[str] = []
+    metadata: dict = {}
+    user_feedback: Optional[dict] = None
+```
+
+### Template Model
+```python
+class BlogTemplate(BaseModel):
+    id: str
+    name: str
+    content: str
+    version: str
+    created_at: datetime
+    updated_at: datetime
+    usage_count: int = 0
+    feedback_score: float = 0.0
+    is_active: bool = True
+```
+
+## Tools Implementation
+
+### Web Scraper Tool
+```python
+from agno.tools import Tool
+
+def web_scraper_tool(url: str) -> dict:
+    """Extract content from a given URL."""
+    try:
+        # Implementation for web scraping
+        response = httpx.get(url)
+        # Parse content using BeautifulSoup or similar
+        # Return structured data
+        return {
+            "title": extracted_title,
+            "content": extracted_content,
+            "metadata": extracted_metadata,
+            "status": "success"
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+```
+
+### Template Loader Tool
+```python
+def template_loader_tool(template_id: str) -> str:
+    """Load template content by ID."""
+    # Load from database or file system
+    template = db.get_template(template_id)
+    return template.content
+```
+
+## API Endpoints
+
+### Blog Post Generation
+```python
+@app.post("/api/generate-post")
+async def generate_blog_post(request: BlogPostRequest):
+    """Generate a blog post from a URL."""
+    result = await url_workflow.run_async(
+        input_data={"url": request.url}
+    )
+    return {"post": result, "status": "success"}
+```
+
+### Template Management
+```python
+@app.post("/api/update-template")
+async def update_template(request: TemplateUpdateRequest):
+    """Update template based on user feedback."""
+    result = await template_workflow.run_async(
+        input_data={
+            "template_id": request.template_id,
+            "feedback": request.feedback
+        }
+    )
+    return {"template": result, "status": "success"}
+```
+
+## Configuration
+
+### AgentOS Configuration
+```python
+agent_os = AgentOS(
+    description="Agno Blog Application",
+    os_id="agno-blog",
+    agents=[
+        url_processor_agent,
+        content_generator_agent,
+        template_manager_agent,
+    ],
+    teams=[blog_content_team],
+    workflows=[
+        url_workflow,
+        template_workflow,
+    ],
+    db=db,
+    enable_mcp=True,
+    config=AgentOSConfig(
+        chat=ChatConfig(
+            quick_prompts={
+                "generate-post": [
+                    "Generate a blog post from this URL",
+                    "What content can you extract from this link?",
+                ],
+                "template-feedback": [
+                    "Update the template based on this feedback",
+                    "How can we improve the content generation?",
+                ]
+            }
+        ),
+    ),
+)
+```
+
+## Deployment Strategy
+
+### Docker Configuration
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY src/ .
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Docker Compose
+```yaml
+version: '3.8'
+services:
+  blog-app:
+    build: ./src
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: agno_blog
+      POSTGRES_USER: agno
+      POSTGRES_PASSWORD: agno
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+## Monitoring and Logging
+
+### Performance Monitoring
+```python
+import logging
+from agno.evals import Eval
+
+# Setup evaluation for content quality
+content_quality_eval = Eval(
+    name="content_quality",
+    description="Evaluate generated blog post quality",
+    eval_runs=[],
+)
+
+# Monitor agent performance
+@agent_os.middleware
+async def performance_middleware(request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    logging.info(f"Request processed in {process_time:.2f}s")
+    return response
+```
+
+## Testing Strategy
+
+### Unit Tests for Agents
+```python
+import pytest
+from agno.agent import Agent
+
+def test_url_processor_agent():
+    agent = create_url_processor_agent()
+    result = agent.run("https://example.com/article")
+    assert result.status == "success"
+    assert "title" in result.data
+```
+
+### Integration Tests
+```python
+def test_blog_generation_workflow():
+    workflow = create_url_workflow()
+    result = workflow.run({"url": "https://example.com"})
+    assert result.status == "completed"
+    assert "blog_post" in result.output
+```

@@ -1,0 +1,248 @@
+---
+alwaysApply: true
+description: Agno framework guidelines and best practices for building multi-agent blog applications
+---
+
+# Agno Framework Guidelines
+
+## Overview
+[Agno](https://docs.agno.com/introduction/quickstart) is a Python framework for building multi-agent systems with shared memory, knowledge, and reasoning. It enables engineers to create highly-performant, multi-modal agents and complex agentic workflows.
+
+## Core Components
+
+### 1. Agent Creation
+```python
+from agno.agent import Agent
+from agno.models.anthropic import Claude
+from agno.models.openai import OpenAIChat
+
+# Basic agent setup
+agent = Agent(
+    name="Blog Agent",
+    model=Claude(id="claude-sonnet-4-0"),
+    tools=[HackerNewsTools()],
+    markdown=True,
+)
+```
+
+### 2. AgentOS for Production
+```python
+from agno.agent import Agent
+from agno.db.sqlite import SqliteDb
+from agno.models.anthropic import Claude
+from agno.os import AgentOS
+from agno.tools.mcp import MCPTools
+
+# Create the Agent
+agno_agent = Agent(
+    name="Agno Agent",
+    model=Claude(id="claude-sonnet-4-0"),
+    db=SqliteDb(db_file="agno.db"),
+    tools=[MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp")],
+    add_history_to_context=True,
+    markdown=True,
+)
+
+# Create the AgentOS
+agent_os = AgentOS(agents=[agno_agent])
+app = agent_os.get_app()
+```
+
+### 3. Team Coordination
+```python
+from agno.team import Team
+
+# Create specialized agents
+web_researcher = Agent(
+    name="Web Researcher",
+    model=OpenAIChat("gpt-5-mini"),
+    tools=[DuckDuckGoTools()],
+)
+
+content_writer = Agent(
+    name="Content Writer", 
+    model=OpenAIChat("gpt-5-mini"),
+    instructions=["Create engaging blog content"],
+)
+
+# Create team
+research_team = Team(
+    name="Blog Content Team",
+    members=[web_researcher, content_writer],
+    model=OpenAIChat(id="gpt-5-mini"),
+)
+```
+
+## Blog Application Architecture
+
+### 1. URL Processing Agent
+- **Purpose**: Process URLs and gather related information
+- **Tools**: Web scraping, content extraction, metadata collection
+- **Model**: Claude Sonnet 4.0 for content analysis
+
+### 2. Content Generation Agent
+- **Purpose**: Generate blog articles from gathered information
+- **Tools**: Template system, content formatting, SEO optimization
+- **Model**: GPT-5-mini for content creation
+
+### 3. Template Management Agent
+- **Purpose**: Handle template editing and user feedback
+- **Tools**: File system operations, template validation
+- **Model**: Claude for understanding user feedback
+
+### 4. Knowledge Management
+```python
+from agno.knowledge.knowledge import Knowledge
+from agno.vectordb.lancedb import LanceDb, SearchType
+from agno.knowledge.embedder.cohere import CohereEmbedder
+
+knowledge = Knowledge(
+    vector_db=LanceDb(
+        uri="tmp/lancedb",
+        table_name="blog_knowledge",
+        search_type=SearchType.hybrid,
+        embedder=CohereEmbedder(id="embed-v4.0"),
+    ),
+)
+```
+
+## Database Integration
+
+### SQLite for Development
+```python
+from agno.db.sqlite import SqliteDb
+
+db = SqliteDb(db_file="blog.db")
+```
+
+### PostgreSQL for Production
+```python
+from agno.db.postgres import PostgresDb
+
+db = PostgresDb(db_url="postgresql+psycopg://user:pass@localhost:5432/blog")
+```
+
+## Memory and Session Management
+
+### User Memories
+```python
+agent = Agent(
+    name="Blog Agent",
+    model=Claude(id="claude-sonnet-4-0"),
+    db=db,
+    enable_user_memories=True,
+    add_history_to_context=True,
+    num_history_runs=3,
+)
+```
+
+### Session State Management
+```python
+def add_blog_post(session_state, title: str, content: str) -> str:
+    """Add a blog post to the session state."""
+    if "blog_posts" not in session_state:
+        session_state["blog_posts"] = []
+    
+    session_state["blog_posts"].append({
+        "title": title,
+        "content": content,
+        "created_at": datetime.now().isoformat()
+    })
+    return f"Added blog post: {title}"
+```
+
+## Deployment Guidelines
+
+### FastAPI Integration
+```python
+from fastapi import FastAPI
+from agno.os import AgentOS
+
+# Create custom FastAPI app
+app = FastAPI(title="Agno Blog")
+
+# Add custom routes
+@app.get("/status")
+async def status_check():
+    return {"status": "healthy"}
+
+# Integrate with AgentOS
+agent_os = AgentOS(
+    agents=[blog_agent],
+    fastapi_app=app
+)
+
+app = agent_os.get_app()
+```
+
+### Production Deployment
+```bash
+# Install dependencies
+pip install -U agno fastapi uvicorn sqlalchemy pgvector psycopg
+
+# Run with Uvicorn
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+
+# Or with Gunicorn
+gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+
+## Best Practices
+
+### 1. Agent Design
+- Use clear, descriptive names and roles
+- Provide specific instructions for each agent
+- Enable markdown output for better formatting
+- Use appropriate tools for each agent's purpose
+
+### 2. Error Handling
+- Implement proper error handling in tools
+- Use try-catch blocks for external API calls
+- Provide meaningful error messages to users
+
+### 3. Performance
+- Use appropriate models for different tasks
+- Implement caching for frequently accessed data
+- Use streaming for long-running operations
+
+### 4. Security
+- Set up proper authentication with `OS_SECURITY_KEY`
+- Validate user inputs
+- Use environment variables for sensitive data
+
+## Environment Variables
+```bash
+export OPENAI_API_KEY=your_openai_api_key
+export ANTHROPIC_API_KEY=your_anthropic_api_key
+export CO_API_KEY=your_cohere_api_key
+export OS_SECURITY_KEY=your_security_key
+export DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/blog
+```
+
+## File Structure
+```
+agno-blog/
+├── src/
+│   ├── agents/
+│   │   ├── url_processor.py
+│   │   ├── content_generator.py
+│   │   └── template_manager.py
+│   ├── tools/
+│   │   ├── web_scraper.py
+│   │   └── content_formatter.py
+│   ├── models/
+│   │   └── blog_post.py
+│   ├── main.py
+│   └── requirements.txt
+├── templates/
+│   └── blog_template.md
+└── compose.yml
+```
+
+## Key Features for Blog App
+1. **URL Processing**: Automatic content extraction from URLs
+2. **Template System**: Editable blog post templates
+3. **User Feedback**: Template improvement based on user input
+4. **Knowledge Base**: Vector storage for blog content and templates
+5. **Multi-Agent Coordination**: Specialized agents for different tasks
+6. **Memory Management**: Persistent user preferences and history
