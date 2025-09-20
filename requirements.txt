@@ -1,0 +1,17 @@
+agno
+anthropic
+fastapi[standard]
+mcp
+sqlalchemy
+uvicorn[standard]
+jinja2
+python-multipart
+httpx
+beautifulsoup4
+lxml
+pydantic
+# 追加の依存関係
+cohere
+lancedb
+pgvector
+psycopg
