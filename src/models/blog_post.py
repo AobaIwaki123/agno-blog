@@ -279,7 +279,7 @@ class BlogPostDB(Base):
         String(50), nullable=False, default="default"
     )
     tags = Column(JSON, default=list)  # Store as JSON array
-    metadata = Column(
+    post_metadata = Column(
         JSON, default=dict
     )  # Store as JSON object
     created_at = Column(
@@ -311,7 +311,7 @@ class BlogPostDB(Base):
             "url_source": self.url_source,
             "template_used": self.template_used,
             "tags": self.tags or [],
-            "metadata": self.metadata or {},
+            "metadata": self.post_metadata or {},
             "created_at": self.created_at.isoformat()
             if self.created_at
             else None,

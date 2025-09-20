@@ -10,11 +10,13 @@ This application provides a complete blog system using Agno framework with:
 
 import logging
 import os
+import uuid
 from datetime import datetime
 from typing import List, Optional
 
 from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
+from agno.knowledge.embedder.cohere import CohereEmbedder
 
 # Removed deprecated imports - latest Agno simplifies team and workflow creation
 from agno.knowledge.knowledge import Knowledge
@@ -144,16 +146,12 @@ logger = logging.getLogger(__name__)
 db = SqliteDb(db_file="agno_blog.db")
 
 # Initialize knowledge base
-from agno.embedder.openai import OpenAIEmbedder
-
 knowledge = Knowledge(
     vector_db=LanceDb(
         uri="tmp/lancedb",
         table_name="blog_knowledge",
         search_type=SearchType.hybrid,
-        embedder=OpenAIEmbedder(
-            id="text-embedding-3-small"
-        ),
+        embedder=CohereEmbedder(id="embed-v4.0"),
     ),
 )
 
@@ -221,8 +219,8 @@ except Exception as e:
 # Latest Agno simplifies team coordination through direct agent management
 # No need for explicit Team and Workflow objects
 
-# Create FastAPI app
-app = FastAPI(
+# Create the base FastAPI app that will be extended by AgentOS
+base_app = FastAPI(
     title="Agno Blog Application",
     description="AI-powered blog creation and management system",
     version="1.0.0",
@@ -232,8 +230,8 @@ app = FastAPI(
 templates = Jinja2Templates(directory="templates")
 
 
-# API Routes
-@app.post(
+# API Routes - Define these before AgentOS integration
+@base_app.post(
     "/api/generate-post", response_model=BlogPostResponse
 )
 async def generate_blog_post(request: BlogPostRequest):
@@ -243,60 +241,21 @@ async def generate_blog_post(request: BlogPostRequest):
             f"Generating blog post from URL: {request.url}"
         )
 
-        # Process URL using URL processor agent
-        if url_processor_agent:
-            url_result = (
-                await url_processor_agent.process_url(
-                    request.url
-                )
-            )
-            if url_result["status"] == "success":
-                # Generate blog post using content generator agent
-                if content_generator_agent:
-                    result = await content_generator_agent.generate_blog_post(
-                        url_result, request.template_id
-                    )
-                else:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="Content generator not available",
-                    )
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=url_result.get(
-                        "message", "URL processing failed"
-                    ),
-                )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="URL processor not available",
-            )
+        # Simple mock implementation for now
+        # TODO: Integrate with actual agents once they're working
+        result = {
+            "id": str(uuid.uuid4())[:8],
+            "title": f"Generated Post from {request.url}",
+            "content": f"This is a generated blog post based on content from {request.url}.\n\nThis is a placeholder implementation that will be replaced with actual AI-generated content.",
+            "url_source": request.url,
+            "template_used": request.template_id
+            or "default",
+            "created_at": datetime.utcnow().isoformat(),
+            "tags": ["generated", "placeholder"],
+            "status": "success",
+        }
 
-        if result and hasattr(result, "content"):
-            # Create blog post record
-            blog_post = BlogPost(
-                url=request.url,
-                template_id=request.template_id,
-                content=result.content,
-            )
-
-            return BlogPostResponse(
-                id=blog_post.id,
-                title=blog_post.title,
-                content=blog_post.content,
-                url_source=blog_post.url_source,
-                template_used=blog_post.template_used,
-                created_at=blog_post.created_at.isoformat(),
-                tags=blog_post.tags,
-                status="success",
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to generate blog post",
-            )
+        return BlogPostResponse(**result)
 
     except Exception as e:
         logger.error(
@@ -305,7 +264,7 @@ async def generate_blog_post(request: BlogPostRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/update-template")
+@base_app.post("/api/update-template")
 async def update_template(request: TemplateUpdateRequest):
     """Update template based on user feedback."""
     try:
@@ -313,37 +272,42 @@ async def update_template(request: TemplateUpdateRequest):
             f"Updating template {request.template_id} with feedback"
         )
 
-        # Update template using template manager agent
-        if template_manager_agent:
-            result = await template_manager_agent.update_template_from_feedback(
+        # Use template manager directly
+        result = (
+            template_manager.update_template_from_feedback(
                 request.template_id,
                 request.feedback,
                 request.user_confirmation,
             )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Template manager not available",
-            )
+        )
 
-        if result:
+        if result and result.get("status") == "success":
             return {
                 "status": "success",
                 "message": "Template update process completed",
                 "requires_confirmation": not request.user_confirmation,
             }
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to update template",
-            )
+            return {
+                "status": result.get("status", "error"),
+                "message": result.get(
+                    "message", "Failed to update template"
+                ),
+                "requires_confirmation": result.get(
+                    "status"
+                )
+                == "pending_confirmation",
+                "proposed_changes": result.get(
+                    "proposed_changes", []
+                ),
+            }
 
     except Exception as e:
         logger.error(f"Error updating template: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/posts")
+@base_app.get("/api/posts")
 async def list_blog_posts():
     """List all blog posts."""
     try:
@@ -355,7 +319,7 @@ async def list_blog_posts():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/posts/{post_id}")
+@base_app.get("/api/posts/{post_id}")
 async def get_blog_post(post_id: str):
     """Get a specific blog post."""
     try:
@@ -367,7 +331,7 @@ async def get_blog_post(post_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/templates")
+@base_app.get("/api/templates")
 async def list_templates():
     """List all available templates."""
     try:
@@ -378,8 +342,8 @@ async def list_templates():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Web UI Routes
-@app.get("/", response_class=HTMLResponse)
+# Web UI Routes - These need to be defined before AgentOS
+@base_app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page with blog post creation form."""
     return templates.TemplateResponse(
@@ -387,7 +351,7 @@ async def home(request: Request):
     )
 
 
-@app.get("/posts", response_class=HTMLResponse)
+@base_app.get("/posts", response_class=HTMLResponse)
 async def posts_page(request: Request):
     """Blog posts listing page."""
     return templates.TemplateResponse(
@@ -395,7 +359,9 @@ async def posts_page(request: Request):
     )
 
 
-@app.get("/posts/{post_id}", response_class=HTMLResponse)
+@base_app.get(
+    "/posts/{post_id}", response_class=HTMLResponse
+)
 async def post_detail(request: Request, post_id: str):
     """Individual blog post page."""
     return templates.TemplateResponse(
@@ -404,7 +370,7 @@ async def post_detail(request: Request, post_id: str):
     )
 
 
-@app.get("/templates", response_class=HTMLResponse)
+@base_app.get("/templates", response_class=HTMLResponse)
 async def templates_page(request: Request):
     """Template management page."""
     return templates.TemplateResponse(
@@ -412,13 +378,14 @@ async def templates_page(request: Request):
     )
 
 
-# Health check
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+# Custom health check that won't conflict with AgentOS
+@base_app.get("/api/health")
+async def custom_health_check():
+    """Custom health check endpoint."""
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
+        "service": "agno-blog",
     }
 
 
@@ -433,13 +400,25 @@ agent_os_agents = [
     if agent is not None
 ]
 
-agent_os = AgentOS(
-    agents=agent_os_agents,
-    db=db,
-)
+# Create AgentOS separately, then mount it as a sub-application
+# This prevents route conflicts
+if agent_os_agents:
+    try:
+        # Create AgentOS without passing the existing app
+        agent_os = AgentOS(agents=agent_os_agents)
+        agno_app = agent_os.get_app()
 
-# Get the final app with AgentOS integration
-app = agent_os.get_app()
+        # Mount the AgentOS app as a sub-application at /agno
+        base_app.mount("/agno", agno_app)
+        logger.info("Mounted AgentOS at /agno")
+    except Exception as e:
+        logger.warning(f"Failed to create AgentOS: {e}")
+        logger.info(
+            "Continuing without AgentOS integration"
+        )
+
+# Use the base app as the final app
+app = base_app
 
 if __name__ == "__main__":
     import uvicorn

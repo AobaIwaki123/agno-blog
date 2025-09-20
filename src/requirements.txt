@@ -26,6 +26,7 @@ numpy>=1.24.0
 # Vector Database and Knowledge Management - Updated versions
 lancedb>=0.13.0
 cohere>=5.0.0
+tantivy>=0.20.0
 
 # Content Processing
 markdown>=3.5.0
