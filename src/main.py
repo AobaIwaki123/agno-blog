@@ -32,55 +32,13 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 # Import custom agents and tools
-try:
-    from agents.content_generator import (
-        ContentGeneratorAgent,
-    )
-    from agents.template_manager import TemplateManagerAgent
-    from agents.url_processor import URLProcessorAgent
-    from models.blog_post import BlogPost, BlogTemplate
-    from tools.content_processor import (
-        ContentProcessingTools,
-    )
-    from tools.template_manager import (
-        TemplateManagementTools,
-    )
-    from tools.web_scraper import WebScrapingTools
-except ImportError as e:
-    logging.error(f"Import error: {e}")
-
-    # For now, create placeholder classes
-    class URLProcessorAgent:
-        def __init__(self, db):
-            pass
-
-    class ContentGeneratorAgent:
-        def __init__(self, db, knowledge=None):
-            pass
-
-    class TemplateManagerAgent:
-        def __init__(self, db):
-            pass
-
-    class WebScrapingTools:
-        def extract_content(self, url):
-            return {
-                "status": "error",
-                "message": "Not implemented",
-            }
-
-    class ContentProcessingTools:
-        pass
-
-    class TemplateManagementTools:
-        def list_templates(self):
-            return []
-
-    class BlogPost:
-        pass
-
-    class BlogTemplate:
-        pass
+from tools.content_processor import (
+    ContentProcessingTools,
+)
+from tools.template_manager import (
+    TemplateManagementTools,
+)
+from tools.web_scraper import WebScrapingTools
 
 
 # Configuration
