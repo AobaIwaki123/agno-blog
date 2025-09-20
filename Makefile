@@ -30,6 +30,12 @@ down: ## Stop server
 	docker compose down
 	@echo "$(GREEN)Server stopped$(NC)"
 
+restart: ## Restart server
+	@echo "$(BLUE)Restarting server...$(NC)"
+	docker compose down
+	docker compose up -d --build
+	@echo "$(GREEN)Server restarted$(NC)"
+
 clean: ## Clean up containers and volumes
 	@echo "$(BLUE)Cleaning up...$(NC)"
 	docker compose down -v
