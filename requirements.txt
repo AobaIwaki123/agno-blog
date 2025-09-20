@@ -10,3 +10,8 @@ httpx
 beautifulsoup4
 lxml
 pydantic
+# 追加の依存関係
+cohere
+lancedb
+pgvector
+psycopg
