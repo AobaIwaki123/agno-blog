@@ -1,0 +1,30 @@
+{
+  "id": "default",
+  "name": "Default Blog Template",
+  "content": "# {title}\n\n## 概要\n{summary}\n\n## 本文\n{content}\n\n## 主なポイント\n- ポイント1: {key_point_1}\n- ポイント2: {key_point_2}\n- ポイント3: {key_point_3}\n\n## 結論\n{conclusion}\n\n---\n**出典**: [{url}]({url})\n**生成日**: {generated_date}\n**テンプレートバージョン**: {template_version}\n\n*この記事はAgno Blogによって自動生成されました*",
+  "version": "1.0.0",
+  "created_at": "2025-09-20T00:00:00Z",
+  "updated_at": "2025-09-20T00:00:00Z",
+  "usage_count": 0,
+  "feedback_score": 0.0,
+  "is_active": true,
+  "variables": {
+    "title": "記事のタイトル",
+    "summary": "記事の概要要約",
+    "content": "メインコンテンツ",
+    "key_point_1": "重要なポイント1",
+    "key_point_2": "重要なポイント2",
+    "key_point_3": "重要なポイント3",
+    "conclusion": "結論",
+    "url": "元のURL",
+    "generated_date": "生成日時",
+    "template_version": "テンプレートバージョン"
+  },
+  "metadata": {
+    "author": "Agno Blog System",
+    "category": "general",
+    "tags": ["auto-generated", "agno", "blog"],
+    "language": "ja",
+    "seo_optimized": true
+  }
+}
