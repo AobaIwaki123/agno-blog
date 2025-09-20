@@ -1,1 +1,5 @@
 agno
+anthropic
+fastapi[standard]
+mcp
+sqlalchemy
