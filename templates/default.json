@@ -1,0 +1,23 @@
+{
+  "id": "default",
+  "name": "Default Blog Template",
+  "description": "Standard blog post template with title, introduction, main content, and conclusion",
+  "content": "# {title}\n\n## Introduction\n\n{introduction}\n\n## Main Content\n\n{main_content}\n\n## Key Points\n\n{key_points}\n\n## Conclusion\n\n{conclusion}\n\n---\n\n*Published on {publish_date}*\n*Tags: {tags}*\n*Source: {source_url}*",
+  "version": "1.0.0",
+  "created_at": "2025-09-20T12:10:21.012755",
+  "updated_at": "2025-09-20T12:10:21.012777",
+  "usage_count": 0,
+  "feedback_score": 5.0,
+  "is_active": true,
+  "variables": [
+    "title",
+    "introduction",
+    "main_content",
+    "key_points",
+    "conclusion",
+    "publish_date",
+    "tags",
+    "source_url"
+  ],
+  "feedback_history": []
+}

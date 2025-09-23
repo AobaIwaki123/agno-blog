@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+description: Conda environment activation requirement for Agno blog project
+---
+
+# Conda Environment Rule
+
+## Required Environment Setup
+
+**ALWAYS** activate the `agno` conda environment before running any Python commands or scripts in this project.
+
+### Commands to run:
+```bash
+conda activate agno
+```
+
+### When to apply:
+- Before running any Python scripts
+- Before starting the development server
+- Before running tests
+- Before installing Python packages
+- Before any Python-related terminal commands
+
+### Example usage patterns:
+```bash
+# Starting the application
+conda activate agno && cd src && python main.py
+
+# Running tests
+conda activate agno && python test_agent_implementation.py
+
+# Installing packages
+conda activate agno && pip install package-name
+```
+
+### Environment details:
+- Environment name: `agno`
+- Python version: 3.12
+- Contains all required dependencies for the Agno framework
+- Required for proper import resolution and package availability
+
+### Why this is important:
+1. The `agno` package and its dependencies are only available in this conda environment
+2. Python path configuration is set up correctly in this environment
+3. All project dependencies are isolated in this environment
+4. Prevents conflicts with system Python or other projects
+
+**Remember: Never run Python commands without first activating the agno environment!**

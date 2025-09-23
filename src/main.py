@@ -10,6 +10,7 @@ This application provides a complete blog system using Agno framework with:
 """
 
 import logging
+from datetime import datetime
 
 from agno.os import AgentOS
 from fastapi import FastAPI
@@ -50,6 +51,16 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(api_router)
     app.include_router(web_router)
+
+    # Add root-level health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Root-level health check endpoint."""
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "service": "agno-blog",
+        }
 
     # Create and integrate agents
     agents = create_agents()

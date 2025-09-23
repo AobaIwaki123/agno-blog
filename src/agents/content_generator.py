@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
 from agno.knowledge.knowledge import Knowledge
-from agno.models.openai import OpenAIChat
+from agno.models.anthropic import Claude
 from agno.tools import tool
 
 from tools.content_processor import ContentProcessingTools
@@ -100,7 +100,7 @@ class ContentGeneratorAgent:
         # Create the Agno agent
         self.agent = Agent(
             name="Content Generator",
-            model=OpenAIChat(id="gpt-5-mini"),
+            model=Claude(id="claude-sonnet-4-20250514"),
             tools=[
                 generate_blog_post,
                 enhance_blog_content,

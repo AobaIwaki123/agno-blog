@@ -9,7 +9,6 @@ from typing import List, Optional
 
 from agno.agent import Agent
 from agno.models.anthropic import Claude
-from agno.models.openai import OpenAIChat
 
 from config import Config
 from database import get_database, get_knowledge
@@ -41,9 +40,7 @@ class AgentFactory:
 
             agent = Agent(
                 name="URL Processor",
-                model=Claude(
-                    id="claude-3-5-sonnet-20241022"
-                ),
+                model=Claude(id="claude-sonnet-4-20250514"),
                 tools=[
                     self.web_scraper,
                     self.content_processor,
@@ -74,15 +71,15 @@ class AgentFactory:
     ) -> Optional[Agent]:
         """Create the content generator agent."""
         try:
-            if not Config.OPENAI_API_KEY:
+            if not Config.ANTHROPIC_API_KEY:
                 logger.warning(
-                    "OPENAI_API_KEY not set, content generator agent unavailable"
+                    "ANTHROPIC_API_KEY not set, content generator agent unavailable"
                 )
                 return None
 
             agent = Agent(
                 name="Content Generator",
-                model=OpenAIChat(id="gpt-5-mini"),
+                model=Claude(id="claude-sonnet-4-20250514"),
                 tools=[
                     self.template_manager,
                     self.content_processor,
@@ -121,9 +118,7 @@ class AgentFactory:
 
             agent = Agent(
                 name="Template Manager",
-                model=Claude(
-                    id="claude-3-5-sonnet-20241022"
-                ),
+                model=Claude(id="claude-sonnet-4-20250514"),
                 tools=[self.template_manager],
                 instructions=[
                     "Analyze user feedback on generated content",
