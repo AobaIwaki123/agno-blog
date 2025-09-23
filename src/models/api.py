@@ -20,6 +20,10 @@ class BlogPostRequest(BaseModel):
         default="default",
         description="Template ID to use for generation",
     )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Optional tags for the blog post",
+    )
 
 
 class TemplateUpdateRequest(BaseModel):
@@ -64,6 +68,9 @@ class BlogPostResponse(BaseModel):
     tags: List[str] = Field(
         default=[], description="Associated tags"
     )
+    metadata: Optional[dict] = Field(
+        default=None, description="Additional metadata"
+    )
     status: str = Field(
         ..., description="Status of the blog post"
     )
@@ -97,11 +104,11 @@ class BlogPostListResponse(BaseModel):
     total: int = Field(
         ..., description="Total number of posts"
     )
-    page: int = Field(
-        default=1, description="Current page number"
-    )
-    per_page: int = Field(
+    limit: int = Field(
         default=10, description="Number of posts per page"
+    )
+    offset: int = Field(
+        default=0, description="Offset for pagination"
     )
 
 

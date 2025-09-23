@@ -11,7 +11,7 @@ from agno.agent import Agent
 from agno.models.anthropic import Claude
 
 from config import Config
-from database import get_database, get_knowledge
+from database import get_agno_database, get_knowledge
 from tools.content_processor import ContentProcessingTools
 from tools.template_manager import TemplateManagementTools
 from tools.web_scraper import WebScrapingTools
@@ -23,7 +23,9 @@ class AgentFactory:
     """Factory for creating and managing agents."""
 
     def __init__(self):
-        self.db = get_database()
+        self.agno_db = (
+            get_agno_database()
+        )  # For Agno agents
         self.knowledge = get_knowledge()
         self.web_scraper = WebScrapingTools()
         self.content_processor = ContentProcessingTools()
@@ -52,7 +54,7 @@ class AgentFactory:
                     "Clean and structure the extracted content",
                     "Provide a summary of the extracted content",
                 ],
-                db=self.db,
+                db=self.agno_db,
                 enable_user_memories=True,
                 markdown=True,
             )
@@ -91,7 +93,7 @@ class AgentFactory:
                     "Include relevant metadata and tags",
                     "Format content appropriately for web publication",
                 ],
-                db=self.db,
+                db=self.agno_db,
                 knowledge=self.knowledge,
                 markdown=True,
             )
@@ -127,7 +129,7 @@ class AgentFactory:
                     "Always ask for user confirmation before updating templates",
                     "Track template versions and changes",
                 ],
-                db=self.db,
+                db=self.agno_db,
                 markdown=True,
             )
             logger.info(

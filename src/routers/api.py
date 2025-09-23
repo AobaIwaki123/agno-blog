@@ -272,13 +272,30 @@ async def list_blog_posts(
 ):
     """List all blog posts with pagination and optional tag filtering."""
     try:
-        # For now, return empty list until database methods are properly implemented
         logger.info(
-            "Listing blog posts - returning empty list for now"
+            f"Listing blog posts with limit={limit}, offset={offset}, tag={tag}"
+        )
+
+        # Get database instance
+        db = get_database()
+
+        # Get posts from database
+        posts = db.list_blog_posts(
+            limit=limit, offset=offset, tag=tag
+        )
+
+        # Get total count
+        total = db.count_blog_posts(tag=tag)
+
+        logger.info(
+            f"Found {len(posts)} posts, total={total}"
         )
 
         return BlogPostListResponse(
-            posts=[], total=0, limit=limit, offset=offset
+            posts=posts,
+            total=total,
+            limit=limit,
+            offset=offset,
         )
     except Exception as e:
         logger.error(f"Error listing blog posts: {str(e)}")
@@ -291,13 +308,36 @@ async def list_blog_posts(
 async def get_blog_post(post_id: str):
     """Get a specific blog post by ID."""
     try:
-        # For now, return 404 until database methods are properly implemented
+        logger.info(f"Getting blog post {post_id}")
+
+        # Get database instance
+        db = get_database()
+
+        # Get post from database
+        post_data = db.get_blog_post(post_id)
+
+        if not post_data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Blog post {post_id} not found",
+            )
+
         logger.info(
-            f"Getting blog post {post_id} - returning 404 for now"
+            f"Found blog post: {post_data['title']}"
         )
-        raise HTTPException(
-            status_code=404,
-            detail=f"Blog post {post_id} not found",
+
+        return BlogPostResponse(
+            id=post_data["id"],
+            title=post_data["title"],
+            content=post_data["content"],
+            url_source=post_data.get("url_source"),
+            template_used=post_data.get(
+                "template_used", "default"
+            ),
+            created_at=post_data["created_at"],
+            tags=post_data.get("tags", []),
+            metadata=post_data.get("metadata", {}),
+            status="success",
         )
     except HTTPException:
         raise
