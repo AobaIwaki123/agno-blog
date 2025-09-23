@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}ホーム - Agno Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Hero Section -->
+    <div class="col-12">
+        <div class="card bg-primary text-white mb-4">
+            <div class="card-body text-center py-5">
+                <h1 class="card-title display-4 mb-3">
+                    <i class="bi bi-robot"></i> Agno Blog
+                </h1>
+                <p class="card-text lead">
+                    AIを活用したブログ記事の自動生成・管理システム
+                </p>
+                <p class="card-text">
+                    URLを入力するだけで、高品質なブログ記事を自動生成します
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Blog Post Creation -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="bi bi-plus-circle"></i> 新しいブログ記事を作成
+                </h3>
+            </div>
+            <div class="card-body">
+                <form id="blogPostForm">
+                    <div class="mb-3">
+                        <label for="urlInput" class="form-label">
+                            <i class="bi bi-link-45deg"></i> URL
+                        </label>
+                        <input type="url" class="form-control" id="urlInput" 
+                               placeholder="https://example.com/article" required>
+                        <div class="form-text">
+                            ブログ記事の元となるWebページのURLを入力してください
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="templateSelect" class="form-label">
+                            <i class="bi bi-file-earmark-text"></i> テンプレート
+                        </label>
+                        <select class="form-select" id="templateSelect">
+                            <option value="default">デフォルト</option>
+                            <option value="tech-tutorial">技術チュートリアル</option>
+                            <option value="news-article">ニュース記事</option>
+                        </select>
+                        <div class="form-text">
+                            生成する記事のスタイルを選択してください
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="generateButton">
+                            <span class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                            <span class="button-text">
+                                <i class="bi bi-magic"></i> ブログ記事を生成
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Generated Content Display -->
+        <div id="resultContainer" style="display: none;">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-check"></i> 生成された記事
+                    </h4>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard(document.getElementById('generatedContent').innerText)">
+                            <i class="bi bi-clipboard"></i> コピー
+                        </button>
+                        <button class="btn btn-success btn-sm" id="saveButton">
+                            <i class="bi bi-save"></i> 保存
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="generatedContent" class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">
+                        <!-- Generated content will be displayed here -->
+                    </div>
+                    
+                    <!-- Feedback Section -->
+                    <div class="mt-4">
+                        <h5>フィードバック</h5>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="feedbackText" rows="3" 
+                                    placeholder="生成された記事についてのフィードバックをお聞かせください..."></textarea>
+                        </div>
+                        <button class="btn btn-outline-primary" id="submitFeedback">
+                            <i class="bi bi-chat-dots"></i> フィードバックを送信
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> 統計情報
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0" id="totalPosts">0</h4>
+                            <small class="text-muted">総記事数</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0" id="totalTemplates">3</h4>
+                        <small class="text-muted">テンプレート数</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Posts -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history"></i> 最近の記事
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="recentPosts">
+                    <p class="text-muted">まだ記事がありません</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- How to Use -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-question-circle"></i> 使い方
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-1-circle text-primary me-2"></i>
+                        記事の元となるURLを入力
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-2-circle text-primary me-2"></i>
+                        適切なテンプレートを選択
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-3-circle text-primary me-2"></i>
+                        「ブログ記事を生成」をクリック
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-4-circle text-primary me-2"></i>
+                        生成された記事を確認・編集
+                    </li>
+                    <li>
+                        <i class="bi bi-5-circle text-primary me-2"></i>
+                        フィードバックでテンプレートを改善
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('blogPostForm');
+    const resultContainer = document.getElementById('resultContainer');
+    const generatedContent = document.getElementById('generatedContent');
+    
+    // Load initial stats
+    loadStats();
+    loadRecentPosts();
+    
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const url = document.getElementById('urlInput').value;
+        const templateId = document.getElementById('templateSelect').value;
+        
+        if (!url) {
+            showAlert('URLを入力してください', 'warning');
+            return;
+        }
+        
+        showLoading('generateButton');
+        
+        try {
+            const response = await fetch('/api/generate-post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url: url,
+                    template_id: templateId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Display generated content
+                generatedContent.innerHTML = `
+                    <h2>${result.title}</h2>
+                    <div class="mt-3">${result.content.replace(/\n/g, '<br>')}</div>
+                    <hr>
+                    <small class="text-muted">
+                        作成日時: ${new Date(result.created_at).toLocaleString('ja-JP')} | 
+                        テンプレート: ${result.template_used} | 
+                        タグ: ${result.tags.join(', ')}
+                    </small>
+                `;
+                
+                resultContainer.style.display = 'block';
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                showAlert('ブログ記事が生成されました！', 'success');
+                
+                // Update stats
+                loadStats();
+                loadRecentPosts();
+            } else {
+                showAlert(`エラー: ${result.detail || result.message}`, 'danger');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('記事生成中にエラーが発生しました', 'danger');
+        } finally {
+            hideLoading('generateButton', 'ブログ記事を生成');
+        }
+    });
+    
+    // Feedback submission
+    document.getElementById('submitFeedback').addEventListener('click', async function() {
+        const feedback = document.getElementById('feedbackText').value;
+        const templateId = document.getElementById('templateSelect').value;
+        
+        if (!feedback.trim()) {
+            showAlert('フィードバックを入力してください', 'warning');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/update-template', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    template_id: templateId,
+                    feedback: feedback,
+                    user_confirmation: false
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert('フィードバックを受け付けました。テンプレートの改善に活用させていただきます。', 'success');
+                document.getElementById('feedbackText').value = '';
+            } else {
+                showAlert(`エラー: ${result.detail || result.message}`, 'danger');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('フィードバック送信中にエラーが発生しました', 'danger');
+        }
+    });
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/posts');
+        const result = await response.json();
+        
+        document.getElementById('totalPosts').textContent = result.total || 0;
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+async function loadRecentPosts() {
+    try {
+        const response = await fetch('/api/posts');
+        const result = await response.json();
+        
+        const recentPostsContainer = document.getElementById('recentPosts');
+        
+        if (result.posts && result.posts.length > 0) {
+            const postsHtml = result.posts.slice(0, 3).map(post => `
+                <div class="mb-2">
+                    <a href="/posts/${post.id}" class="text-decoration-none">
+                        <small class="text-primary">${post.title}</small>
+                    </a>
+                    <br>
+                    <small class="text-muted">${new Date(post.created_at).toLocaleDateString('ja-JP')}</small>
+                </div>
+            `).join('');
+            
+            recentPostsContainer.innerHTML = postsHtml;
+        } else {
+            recentPostsContainer.innerHTML = '<p class="text-muted">まだ記事がありません</p>';
+        }
+    } catch (error) {
+        console.error('Error loading recent posts:', error);
+    }
+}
+</script>
+{% endblock %}
